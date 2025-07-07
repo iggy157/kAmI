@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Crown } from "lucide-react"
+import { Crown, CheckCircle } from "lucide-react"
 import Link from "next/link"
 
 interface RegisterFormData {
@@ -20,6 +21,7 @@ interface RegisterFormData {
 
 export default function RegisterForm() {
   const [error, setError] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
@@ -34,9 +36,12 @@ export default function RegisterForm() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true)
     setError("")
+    setSuccessMessage("")
 
     try {
-      const response = await fetch("/api/auth/register", {
+      console.log("Submitting registration form:", { username: data.username, email: data.email })
+
+      const response = await fetch("/api/auth/mock-register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -46,14 +51,29 @@ export default function RegisterForm() {
         }),
       })
 
-      const result = await response.json()
+      console.log("Response status:", response.status)
+
+      const responseText = await response.text()
+      console.log("Response text:", responseText)
+
+      let result
+      try {
+        result = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError)
+        throw new Error(`サーバーからの応答が無効です: ${responseText.substring(0, 100)}`)
+      }
 
       if (!response.ok) {
         throw new Error(result.error || "登録に失敗しました")
       }
 
-      router.push("/login?message=登録が完了しました。ログインしてください。")
+      setSuccessMessage("登録が完了しました！ログインページに移動します...")
+      setTimeout(() => {
+        router.push("/login")
+      }, 2000)
     } catch (err: any) {
+      console.error("Registration error:", err)
       setError(err.message)
     } finally {
       setIsLoading(false)
@@ -78,10 +98,18 @@ export default function RegisterForm() {
               </Alert>
             )}
 
+            {successMessage && (
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="username">ユーザー名</Label>
               <Input
                 id="username"
+                placeholder="例: yamada_taro"
                 {...register("username", {
                   required: "ユーザー名は必須です",
                   minLength: {
@@ -103,6 +131,7 @@ export default function RegisterForm() {
               <Input
                 id="email"
                 type="email"
+                placeholder="例: yamada@example.com"
                 {...register("email", {
                   required: "メールアドレスは必須です",
                   pattern: {
@@ -117,9 +146,9 @@ export default function RegisterForm() {
 
             <div className="space-y-2">
               <Label htmlFor="password">パスワード</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
+                placeholder="6文字以上"
                 {...register("password", {
                   required: "パスワードは必須です",
                   minLength: {
@@ -134,9 +163,9 @@ export default function RegisterForm() {
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">パスワード確認</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
+                placeholder="パスワードを再入力"
                 {...register("confirmPassword", {
                   required: "パスワード確認は必須です",
                   validate: (value) => value === password || "パスワードが一致しません",
@@ -158,6 +187,13 @@ export default function RegisterForm() {
                 ログイン
               </Link>
             </p>
+            <div className="mt-4 p-3 bg-green-50 rounded-lg">
+              <p className="text-xs text-green-700">
+                <strong>登録後のログイン:</strong>
+                <br />
+                登録したメールアドレスと設定したパスワードでログインできます
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -11,6 +11,7 @@ export interface MockUser {
   createdAt: string
 }
 
+// In-memory storage for demo (in production, this would be a database)
 const mockUsers: MockUser[] = [
   {
     id: "1",
@@ -32,27 +33,46 @@ const mockUsers: MockUser[] = [
   },
 ]
 
+// Store registered users with their actual passwords
+const userPasswords: Record<string, string> = {
+  "admin@kami.app": "admin123",
+  "user1@kami.app": "user123",
+}
+
 export const mockLogin = async (email: string, password: string): Promise<{ user: MockUser; token: string } | null> => {
-  // Simple mock authentication
-  if (email === "admin@kami.app" && password === "admin123") {
-    const user = mockUsers[0]
-    const token = `mock-token-${user.id}-${Date.now()}`
-    return { user, token }
+  console.log("Mock login attempt:", { email, password, userCount: mockUsers.length })
+  console.log(
+    "Available users:",
+    mockUsers.map((u) => u.email),
+  )
+  console.log("Available passwords:", Object.keys(userPasswords))
+
+  // Find user by email
+  const user = mockUsers.find((u) => u.email === email)
+  if (!user) {
+    console.log("User not found for email:", email)
+    return null
   }
 
-  if (email === "user1@kami.app" && password === "user123") {
-    const user = mockUsers[1]
-    const token = `mock-token-${user.id}-${Date.now()}`
-    return { user, token }
+  // Check password
+  const storedPassword = userPasswords[email]
+  if (!storedPassword || storedPassword !== password) {
+    console.log("Password mismatch:", { provided: password, stored: storedPassword })
+    return null
   }
 
-  return null
+  console.log("Login successful for:", email)
+  const token = `mock-token-${user.id}-${Date.now()}`
+  return { user, token }
 }
 
 export const mockRegister = async (username: string, email: string, password: string): Promise<MockUser | null> => {
+  console.log("Mock register attempt:", { username, email, currentUsers: mockUsers.length })
+
   // Check if user already exists
   const existingUser = mockUsers.find((u) => u.email === email || u.username === username)
   if (existingUser) {
+    console.log("User already exists:", existingUser.email)
     return null
   }
 
@@ -67,10 +87,25 @@ export const mockRegister = async (username: string, email: string, password: st
   }
 
   mockUsers.push(newUser)
+  userPasswords[email] = password // Store the actual password
+
+  console.log("New user created:", newUser)
+  console.log("Password stored for:", email)
+  console.log("Total users now:", mockUsers.length)
+
   return newUser
 }
 
 export const mockGetUserFromToken = async (token: string): Promise<MockUser | null> => {
-  const userId = token.split("-")[2]
-  return mockUsers.find((u) => u.id === userId) || null
+  const parts = token.split("-")
+  if (parts.length < 3) return null
+
+  const userId = parts[2]
+  const user = mockUsers.find((u) => u.id === userId)
+  console.log("Getting user from token:", { userId, found: !!user })
+  return user || null
+}
+
+export const getAllMockUsers = (): MockUser[] => {
+  return mockUsers
 }

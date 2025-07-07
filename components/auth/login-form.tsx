@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -34,16 +35,15 @@ export default function LoginForm() {
     setError("")
 
     try {
-      console.log("Submitting login form:", { email: data.email })
+      console.log("Submitting login form:", { email: data.email, password: data.password })
 
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch("/api/auth/mock-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
 
       console.log("Response status:", response.status)
-      console.log("Response headers:", Object.fromEntries(response.headers.entries()))
 
       const responseText = await response.text()
       console.log("Response text:", responseText)
@@ -60,6 +60,7 @@ export default function LoginForm() {
         throw new Error(result.error || "ログインに失敗しました")
       }
 
+      console.log("Login successful, setting user:", result.user)
       setUser(result.user)
       setToken(result.token)
       router.push("/dashboard")
@@ -109,9 +110,8 @@ export default function LoginForm() {
 
             <div className="space-y-2">
               <Label htmlFor="password">パスワード</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="admin123"
                 {...register("password", {
                   required: "パスワードは必須です",
@@ -141,9 +141,9 @@ export default function LoginForm() {
               <p className="text-xs text-purple-700">
                 <strong>デモ用アカウント:</strong>
                 <br />
-                Email: admin@kami.app
+                Email: admin@kami.app / Password: admin123
                 <br />
-                Password: admin123
+                Email: user1@kami.app / Password: user123
               </p>
             </div>
           </div>

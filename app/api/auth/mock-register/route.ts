@@ -12,6 +12,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "すべてのフィールドは必須です" }, { status: 400 })
     }
 
+    // Basic validation
+    if (username.length < 3) {
+      return NextResponse.json({ error: "ユーザー名は3文字以上で入力してください" }, { status: 400 })
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json({ error: "パスワードは6文字以上で入力してください" }, { status: 400 })
+    }
+
+    const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: "有効なメールアドレスを入力してください" }, { status: 400 })
+    }
+
     const user = await mockRegister(username, email, password)
 
     if (!user) {
@@ -19,6 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
+      success: true,
       message: "ユーザーが正常に作成されました",
       user: {
         id: user.id,
