@@ -39,6 +39,9 @@ const userPasswords: Record<string, string> = {
   "user1@kami.app": "user123",
 }
 
+// Store created gods
+const mockGods: any[] = []
+
 export const mockLogin = async (email: string, password: string): Promise<{ user: MockUser; token: string } | null> => {
   console.log("Mock login attempt:", { email, password, userCount: mockUsers.length })
   console.log(
@@ -106,6 +109,41 @@ export const mockGetUserFromToken = async (token: string): Promise<MockUser | nu
   return user || null
 }
 
+export const mockUpdateUserBalance = async (userId: string, newBalance: number): Promise<boolean> => {
+  const userIndex = mockUsers.findIndex((u) => u.id === userId)
+  if (userIndex === -1) return false
+
+  mockUsers[userIndex].saisenBalance = newBalance
+  console.log("Updated user balance:", { userId, newBalance })
+  return true
+}
+
+export const mockCreateGod = async (godData: any): Promise<string> => {
+  const godId = `god_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const god = {
+    id: godId,
+    ...godData,
+    createdAt: new Date().toISOString(),
+  }
+
+  mockGods.push(god)
+  console.log("God created:", { godId, totalGods: mockGods.length })
+  return godId
+}
+
+export const mockGetGodById = async (godId: string): Promise<any | null> => {
+  const god = mockGods.find((g) => g.id === godId)
+  return god || null
+}
+
+export const mockGetUserGods = async (userId: string): Promise<any[]> => {
+  return mockGods.filter((g) => g.creatorId === userId)
+}
+
 export const getAllMockUsers = (): MockUser[] => {
   return mockUsers
+}
+
+export const getAllMockGods = (): any[] => {
+  return mockGods
 }
