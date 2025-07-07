@@ -441,6 +441,32 @@ export default function CreateGodPage() {
       tokenPreview: token?.substring(0, 30) + "...",
     })
 
+    // APIエンドポイントのテスト
+    try {
+      console.log("Testing API endpoint accessibility...")
+      const testResponse = await fetch("/api/test-god-create", {
+        method: "GET",
+      })
+      console.log("Test API response status:", testResponse.status)
+      const testData = await testResponse.json()
+      console.log("Test API response:", testData)
+    } catch (error) {
+      console.error("Test API failed:", error)
+    }
+
+    // 神様作成APIのGETテスト
+    try {
+      console.log("Testing god creation API GET...")
+      const getResponse = await fetch("/api/gods/create", {
+        method: "GET",
+      })
+      console.log("God creation API GET status:", getResponse.status)
+      const getData = await getResponse.json()
+      console.log("God creation API GET response:", getData)
+    } catch (error) {
+      console.error("God creation API GET failed:", error)
+    }
+
     if (userBalance < CREATION_COST) {
       setError(`神様作成には${CREATION_COST}賽銭が必要です。現在の残高: ${userBalance}賽銭`)
       return
