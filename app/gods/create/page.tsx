@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/auth-store"
@@ -232,19 +234,23 @@ export default function CreateGodPage() {
     const interval = setInterval(() => {
       saveDataToLocalStorage()
       setAutoSaveStatus("自動保存しました")
-      setTimeout(() => setAutoSaveStatus(""), 3000)
-    }, 30000)
+      setTimeout(() => setAutoSaveStatus(""), 2000)
+    }, 10000) // 30秒から10秒に変更
     return () => clearInterval(interval)
   }, [formData])
 
   const fetchUserBalance = async () => {
     try {
-      const response = await fetch("/api/dashboard/stats", {
+      // ユーザー情報から直接残高を取得
+      setUserBalance(user?.saisenBalance || 1000)
+
+      // 最新の残高を取得する場合
+      const response = await fetch("/api/auth/user-info", {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (response.ok) {
         const data = await response.json()
-        setUserBalance(user?.saisenBalance || 1000)
+        setUserBalance(data.user.saisenBalance || 1000)
       }
     } catch (error) {
       console.error("残高取得エラー:", error)
@@ -280,11 +286,49 @@ export default function CreateGodPage() {
     }
   }
 
+  // Enter キーハンドラーを追加
+  const handleKeyDown = (e: React.KeyboardEvent, nextFieldId?: string) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      if (nextFieldId) {
+        const nextField = document.getElementById(nextFieldId)
+        if (nextField) {
+          nextField.focus()
+        }
+      } else {
+        // 次のステップに進む
+        if (isStepValid(activeStep)) {
+          handleNext()
+        }
+      }
+    }
+  }
+
+  // 入力変更時の自動保存を追加
   const handleInputChange = (field: keyof FormData, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
+    setFormData((prev) => {
+      const newData = {
+        ...prev,
+        [field]: value,
+      }
+      // 入力変更時に即座に保存
+      setTimeout(() => {
+        try {
+          const dataToSave = {
+            formData: newData,
+            activeStep,
+            savedAt: new Date().toISOString(),
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+          setAutoSaveStatus("保存しました")
+          setTimeout(() => setAutoSaveStatus(""), 2000)
+        } catch (error) {
+          console.error("自動保存エラー:", error)
+        }
+      }, 500) // 500ms後に保存
+
+      return newData
+    })
     setError("")
     setSuccess("")
   }
@@ -455,7 +499,9 @@ export default function CreateGodPage() {
                   placeholder="例: 筋トレ神、週休2日制神"
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e)}
                   className="mt-2"
+                  autoFocus
                 />
                 <p className="text-sm text-gray-600 mt-1">神様の名前を入力してください（必須）</p>
               </div>
@@ -477,7 +523,9 @@ export default function CreateGodPage() {
                   placeholder="例: 筋肉の神、労働の神"
                   value={formData.deity}
                   onChange={(e) => handleInputChange("deity", e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, "beliefs")}
                   className="mt-2"
+                  autoFocus
                 />
                 <p className="text-sm text-gray-600 mt-1">この神様はどんな分野の神様ですか？（必須）</p>
               </div>
@@ -488,6 +536,7 @@ export default function CreateGodPage() {
                   placeholder="例: 毎日筋トレしないと神の力が弱まる、仕事も大事だが、休息も大事だ"
                   value={formData.beliefs}
                   onChange={(e) => handleInputChange("beliefs", e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, "special_skills")}
                   className="mt-2"
                   rows={3}
                 />
@@ -500,6 +549,7 @@ export default function CreateGodPage() {
                   placeholder="例: 無限の筋力,休息の力（カンマ区切りで複数入力可能）"
                   value={formData.special_skills}
                   onChange={(e) => handleInputChange("special_skills", e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e)}
                   className="mt-2"
                   rows={3}
                 />
@@ -592,8 +642,10 @@ export default function CreateGodPage() {
                     placeholder="例: 明るく前向きで、いつも笑顔。困っている人を放っておけない優しい性格"
                     value={formData.personality}
                     onChange={(e) => handleInputChange("personality", e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, "speech_style")}
                     className="mt-2"
                     rows={2}
+                    autoFocus
                   />
                 </div>
                 <div>
@@ -603,6 +655,7 @@ export default function CreateGodPage() {
                     placeholder="例: カジュアルでちょっとノリが良い、たまにダジャレを言う"
                     value={formData.speech_style}
                     onChange={(e) => handleInputChange("speech_style", e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, "action_style")}
                     className="mt-2"
                     rows={2}
                   />
@@ -614,6 +667,7 @@ export default function CreateGodPage() {
                     placeholder="例: いつも筋トレをしながら相談に乗る、休息の時間を大切にする"
                     value={formData.action_style}
                     onChange={(e) => handleInputChange("action_style", e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, "likes")}
                     className="mt-2"
                     rows={2}
                   />
@@ -626,6 +680,7 @@ export default function CreateGodPage() {
                       placeholder="例: バーベルを持ち上げること"
                       value={formData.likes}
                       onChange={(e) => handleInputChange("likes", e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, "dislikes")}
                       className="mt-2"
                     />
                   </div>
@@ -636,6 +691,7 @@ export default function CreateGodPage() {
                       placeholder="例: サボりすぎること"
                       value={formData.dislikes}
                       onChange={(e) => handleInputChange("dislikes", e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e)}
                       className="mt-2"
                     />
                   </div>
@@ -659,8 +715,10 @@ export default function CreateGodPage() {
                   placeholder="例: 筋トレを頑張っている人を応援、休み過ぎの人に休養を与える"
                   value={formData.relationship_with_humans}
                   onChange={(e) => handleInputChange("relationship_with_humans", e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, "relationship_with_followers")}
                   className="mt-2"
                   rows={3}
+                  autoFocus
                 />
                 <p className="text-sm text-gray-600 mt-1">一般的な人間に対してどのような関係を築きますか？（必須）</p>
               </div>
@@ -671,6 +729,7 @@ export default function CreateGodPage() {
                   placeholder="例: 毎日筋トレをする信者を応援、休息の重要性を説いてあげる"
                   value={formData.relationship_with_followers}
                   onChange={(e) => handleInputChange("relationship_with_followers", e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, "limitations")}
                   className="mt-2"
                   rows={3}
                 />
@@ -683,6 +742,7 @@ export default function CreateGodPage() {
                   placeholder="例: サボりすぎの信者を完全には救えない"
                   value={formData.limitations}
                   onChange={(e) => handleInputChange("limitations", e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e)}
                   className="mt-2"
                   rows={3}
                 />

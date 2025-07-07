@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
-import { getUserFromToken } from "@/lib/auth"
+import { mockGetUserFromToken } from "@/lib/mock-auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +8,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
     }
 
-    const user = await getUserFromToken(token)
+    const user = await mockGetUserFromToken(token)
     if (!user) {
       return NextResponse.json({ error: "無効なトークンです" }, { status: 401 })
     }
@@ -38,6 +37,8 @@ export async function POST(request: NextRequest) {
 
     // 賽銭残高チェック
     const CREATION_COST = 500
+    console.log("User balance check:", { userBalance: user.saisenBalance, cost: CREATION_COST })
+
     if (user.saisenBalance < CREATION_COST) {
       return NextResponse.json(
         { error: `神様作成には${CREATION_COST}賽銭が必要です。現在の残高: ${user.saisenBalance}賽銭` },
@@ -45,51 +46,56 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 神様を作成
-    const { data: god, error: godError } = await supabase
-      .from("gods")
-      .insert({
-        name,
-        description,
-        image_url: imageUrl,
-        personality: JSON.stringify({
-          personality,
-          mbtiType,
-          speechStyle,
-          actionStyle,
-          likes,
-          dislikes,
-          bigFiveTraits,
-        }),
-        mbti_type: mbtiType,
-        creator_id: user.id,
-        believers_count: 0,
-        power_level: 1,
-        total_offerings: 0,
-      })
-      .select()
-      .single()
+    // 神様データを作成（モック）
+    const godId = `god_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    if (godError) {
-      console.error("God creation error:", godError)
-      return NextResponse.json({ error: "神様の作成に失敗しました" }, { status: 500 })
+    const godData = {
+      id: godId,
+      name,
+      description,
+      imageUrl,
+      personality: JSON.stringify({
+        personality,
+        mbtiType,
+        speechStyle,
+        actionStyle,
+        likes,
+        dislikes,
+        bigFiveTraits,
+        deity,
+        beliefs,
+        specialSkills,
+        relationshipWithHumans,
+        relationshipWithFollowers,
+        limitations,
+      }),
+      mbtiType,
+      category,
+      colorTheme,
+      creatorId: user.id,
+      believersCount: 0,
+      powerLevel: 1,
+      totalOfferings: 0,
+      createdAt: new Date().toISOString(),
     }
 
-    // ユーザーの賽銭残高を更新
-    const { error: balanceError } = await supabase
-      .from("users")
-      .update({ saisen_balance: user.saisenBalance - CREATION_COST })
-      .eq("id", user.id)
-
-    if (balanceError) {
-      console.error("Balance update error:", balanceError)
-      // 神様作成は成功したが残高更新に失敗した場合のログ
+    // ローカルストレージに神様データを保存（デモ用）
+    if (typeof window !== "undefined") {
+      const existingGods = JSON.parse(localStorage.getItem("created_gods") || "[]")
+      existingGods.push(godData)
+      localStorage.setItem("created_gods", JSON.stringify(existingGods))
     }
+
+    // ユーザーの賽銭残高を更新（モック）
+    user.saisenBalance -= CREATION_COST
+
+    console.log("God created successfully:", { godId, newBalance: user.saisenBalance })
 
     return NextResponse.json({
       message: "神様が正常に作成されました！",
-      godId: god.id,
-      newBalance: user.saisenBalance - CREATION_COST,
+      godId: godId,
+      newBalance: user.saisenBalance,
+      god: godData,
     })
   } catch (error) {
     console.error("API error:", error)
