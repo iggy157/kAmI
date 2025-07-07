@@ -241,16 +241,32 @@ export default function CreateGodPage() {
 
   const fetchUserBalance = async () => {
     try {
+      console.log("Fetching user balance with token:", token?.substring(0, 30) + "...")
+
       // ユーザー情報から直接残高を取得
-      setUserBalance(user?.saisenBalance || 1000)
+      if (user?.saisenBalance !== undefined) {
+        setUserBalance(user.saisenBalance)
+        console.log("Using user balance from store:", user.saisenBalance)
+      }
 
       // 最新の残高を取得する場合
-      const response = await fetch("/api/auth/user-info", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setUserBalance(data.user.saisenBalance || 1000)
+      if (token) {
+        const response = await fetch("/api/auth/user-info", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        console.log("User info API response status:", response.status)
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log("User info API response data:", data)
+          setUserBalance(data.user.saisenBalance || 1000)
+        } else {
+          const errorText = await response.text()
+          console.log("User info API error:", errorText)
+          // フォールバック: ストアの値を使用
+          setUserBalance(user?.saisenBalance || 1000)
+        }
       }
     } catch (error) {
       console.error("残高取得エラー:", error)
@@ -418,8 +434,20 @@ export default function CreateGodPage() {
   }
 
   const handleSubmit = async () => {
+    console.log("Submit started with:", {
+      userBalance,
+      CREATION_COST,
+      hasToken: !!token,
+      tokenPreview: token?.substring(0, 30) + "...",
+    })
+
     if (userBalance < CREATION_COST) {
       setError(`神様作成には${CREATION_COST}賽銭が必要です。現在の残高: ${userBalance}賽銭`)
+      return
+    }
+
+    if (!token) {
+      setError("認証トークンが見つかりません。再ログインしてください。")
       return
     }
 
@@ -451,6 +479,9 @@ export default function CreateGodPage() {
         bigFiveTraits: formData.bigFiveTraits,
       }
 
+      console.log("Sending god creation request with token:", token.substring(0, 30) + "...")
+      console.log("God data keys:", Object.keys(godData))
+
       const response = await fetch("/api/gods/create", {
         method: "POST",
         headers: {
@@ -460,14 +491,32 @@ export default function CreateGodPage() {
         body: JSON.stringify(godData),
       })
 
-      const result = await response.json()
+      console.log("God creation response status:", response.status)
 
       if (!response.ok) {
-        throw new Error(result.error || "神様の作成に失敗しました")
+        const errorText = await response.text()
+        console.log("God creation error response:", errorText)
+
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch (e) {
+          throw new Error(`サーバーエラー (${response.status}): ${errorText}`)
+        }
+
+        throw new Error(errorData.error || "神様の作成に失敗しました")
       }
+
+      const result = await response.json()
+      console.log("God creation success:", result)
 
       setSuccess("神様が正常に作成されました！")
       localStorage.removeItem(STORAGE_KEY)
+
+      // ユーザーの残高を更新
+      if (result.newBalance !== undefined) {
+        setUserBalance(result.newBalance)
+      }
 
       setTimeout(() => {
         router.push(`/gods/${result.godId}`)
