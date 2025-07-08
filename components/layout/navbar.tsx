@@ -11,18 +11,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuthStore } from "@/store/auth-store"
-import { Home, Users, MessageCircle, Search, Settings, LogOut, Crown, Coins } from "lucide-react"
+import { Home, Users, MessageCircle, Search, Settings, LogOut, Crown, Coins, Mail } from "lucide-react"
 
 export default function Navbar() {
-  const { user, logout } = useAuthStore()
+  const { user, logout, token } = useAuthStore()
   const router = useRouter()
 
   const handleLogout = () => {
+    console.log("Logout clicked")
     logout()
     router.push("/login")
   }
 
-  if (!user) return null
+  // Don't render navbar if no user or token
+  if (!user || !token) {
+    console.log("Navbar: No user or token, not rendering")
+    return null
+  }
 
   return (
     <nav className="bg-gradient-to-r from-purple-900 to-purple-700 border-b border-purple-600 shadow-lg">
@@ -57,10 +62,10 @@ export default function Navbar() {
               </Button>
             </Link>
 
-            <Link href="/search">
+            <Link href="/contact">
               <Button variant="ghost" size="sm" className="text-white hover:bg-purple-800">
-                <Search className="h-4 w-4 mr-2" />
-                検索
+                <Mail className="h-4 w-4 mr-2" />
+                お問い合わせ
               </Button>
             </Link>
 

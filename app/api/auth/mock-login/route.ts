@@ -1,33 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// 簡単なメモリストレージ
-const mockUsers = [
-  {
-    id: "1",
-    username: "admin",
-    email: "admin@kami.app",
-    saisenBalance: 10000,
-    isAdmin: true,
-    isSuperAdmin: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    username: "user1",
-    email: "user1@kami.app",
-    saisenBalance: 1000,
-    isAdmin: false,
-    isSuperAdmin: false,
-    createdAt: new Date().toISOString(),
-  },
-]
-
-const userPasswords: Record<string, string> = {
-  "admin@kami.app": "admin123",
-  "user1@kami.app": "user123",
-}
-
-const activeTokens: Record<string, string> = {}
+import { mockLogin, forceAddToken } from "@/lib/mock-auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,31 +14,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "メールアドレスとパスワードは必須です" }, { status: 400 })
     }
 
-    // ユーザーを検索
-    const user = mockUsers.find((u) => u.email === email)
-    if (!user) {
-      console.log("User not found")
+    const result = await mockLogin(email, password)
+
+    if (!result) {
+      console.log("Login failed")
       return NextResponse.json({ error: "メールアドレスまたはパスワードが間違っています" }, { status: 401 })
     }
 
-    // パスワードチェック
-    const storedPassword = userPasswords[email]
-    if (!storedPassword || storedPassword !== password) {
-      console.log("Password mismatch")
-      return NextResponse.json({ error: "メールアドレスまたはパスワードが間違っています" }, { status: 401 })
-    }
+    const { user, token } = result
 
-    // トークンを生成
-    const token = `mock-token-${user.id}-${Date.now()}`
-
-    // アクティブトークンに保存
-    activeTokens[token] = user.id
+    // 念のため、トークンを強制的に追加（デバッグ用）
+    forceAddToken(token, user.id)
 
     console.log("Login successful:", {
       userId: user.id,
       username: user.username,
       token: token.substring(0, 30) + "...",
-      activeTokensCount: Object.keys(activeTokens).length,
     })
 
     return NextResponse.json({
@@ -95,10 +58,14 @@ export async function POST(request: NextRequest) {
 
 // デバッグ用のGETエンドポイント
 export async function GET() {
+  const { getActiveTokens, getAllMockUsers } = await import("@/lib/mock-auth")
+  const activeTokens = getActiveTokens()
+  const users = getAllMockUsers()
+
   return NextResponse.json({
     message: "Mock login API is accessible",
-    usersCount: mockUsers.length,
+    usersCount: users.length,
     activeTokensCount: Object.keys(activeTokens).length,
-    availableUsers: mockUsers.map((u) => ({ email: u.email, username: u.username })),
+    availableUsers: users.map((u) => ({ email: u.email, username: u.username })),
   })
 }

@@ -42,11 +42,12 @@ const userPasswords: Record<string, string> = {
 // Store created gods
 const mockGods: any[] = []
 
-// Store active tokens with user mapping
+// Store active tokens with user mapping - グローバルに管理
 const activeTokens: Record<string, string> = {}
 
 export const mockLogin = async (email: string, password: string): Promise<{ user: MockUser; token: string } | null> => {
   console.log("Mock login attempt:", { email, password, userCount: mockUsers.length })
+  console.log("Available users:", mockUsers.map(u => ({ id: u.id, email: u.email, username: u.username })))
 
   // Find user by email
   const user = mockUsers.find((u) => u.email === email)
@@ -67,7 +68,10 @@ export const mockLogin = async (email: string, password: string): Promise<{ user
 
   // Store token mapping
   activeTokens[token] = user.id
-  console.log("Token created and stored:", { token: token.substring(0, 30) + "...", userId: user.id })
+  console.log("Token created and stored:", {
+    token: token.substring(0, 30) + "...",
+    userId: user.id,
+  })
 
   return { user, token }
 }
@@ -96,6 +100,8 @@ export const mockRegister = async (username: string, email: string, password: st
   userPasswords[email] = password
 
   console.log("New user created:", newUser)
+  console.log("Updated mockUsers array:", mockUsers.map(u => ({ id: u.id, email: u.email, username: u.username })))
+  console.log("Updated userPasswords:", Object.keys(userPasswords))
   return newUser
 }
 
@@ -107,32 +113,40 @@ export const mockGetUserFromToken = async (token: string): Promise<MockUser | nu
 
   // Check if token exists in active tokens
   const userId = activeTokens[token]
-  if (!userId) {
-    console.log("Token not found in active tokens")
+  if (userId) {
+    const user = mockUsers.find((u) => u.id === userId)
+    console.log("User found from active tokens:", { userId, found: !!user })
+    return user || null
+  }
 
-    // Fallback: try to parse token (old method)
+  // If not found in active tokens, try to parse mock token format
+  if (token.startsWith("mock-token-")) {
     const parts = token.split("-")
-    if (parts.length >= 3 && parts[0] === "mock" && parts[1] === "token") {
-      const fallbackUserId = parts[2]
-      console.log("Trying fallback token parsing:", { fallbackUserId })
+    if (parts.length >= 3) {
+      const userId = parts[2]
+      console.log("Parsing mock token:", { userId })
 
-      const user = mockUsers.find((u) => u.id === fallbackUserId)
+      const user = mockUsers.find((u) => u.id === userId)
       if (user) {
-        // Add to active tokens for future use
+        // Add to active tokens for session management
         activeTokens[token] = user.id
-        console.log("User found via fallback, token added to active tokens")
+        console.log("Token added to active tokens")
         return user
       }
     }
-
-    console.log("Token validation failed completely")
-    return null
   }
 
-  const user = mockUsers.find((u) => u.id === userId)
-  console.log("User found from token:", { userId, found: !!user })
-  return user || null
+  console.log("Token validation failed")
+  return null
 }
+
+export const forceAddToken = (token: string, userId: string) => {
+  activeTokens[token] = userId
+}
+
+export const getActiveTokens = () => activeTokens
+
+export const getAllMockUsers = () => mockUsers
 
 export const mockUpdateUserBalance = async (userId: string, newBalance: number): Promise<boolean> => {
   const userIndex = mockUsers.findIndex((u) => u.id === userId)
@@ -169,15 +183,7 @@ export const mockGetUserGods = async (userId: string): Promise<any[]> => {
   return mockGods.filter((g) => g.creatorId === userId)
 }
 
-export const getAllMockUsers = (): MockUser[] => {
-  return mockUsers
-}
 
 export const getAllMockGods = (): any[] => {
   return mockGods
-}
-
-// Debug function to check active tokens
-export const getActiveTokens = () => {
-  return activeTokens
 }

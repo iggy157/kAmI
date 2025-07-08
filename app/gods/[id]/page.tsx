@@ -149,10 +149,12 @@ export default function GodDetailPage({ params }: { params: { id: string } }) {
                 </div>
 
                 <div className="flex gap-4">
-                  <Button className="bg-purple-600 hover:bg-purple-700 gap-2">
-                    <MessageCircle className="h-4 w-4" />
-                    神託を求める
-                  </Button>
+                  <Link href={`/gods/${params.id}/chat`}>
+                    <Button className="bg-purple-600 hover:bg-purple-700 gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      神託を求める
+                    </Button>
+                  </Link>
                   <Button variant="outline" className="gap-2 bg-transparent">
                     <Heart className="h-4 w-4" />
                     信者になる

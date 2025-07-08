@@ -61,8 +61,12 @@ export default function LoginForm() {
       }
 
       console.log("Login successful, setting user:", result.user)
+      console.log("Setting token:", result.token.substring(0, 30) + "...")
+      
       setUser(result.user)
       setToken(result.token)
+      
+      console.log("User and token set, redirecting to dashboard")
       router.push("/dashboard")
     } catch (err: any) {
       console.error("Login error:", err)
