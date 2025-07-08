@@ -42,7 +42,7 @@ const userPasswords: Record<string, string> = {
 // Store created gods
 const mockGods: any[] = []
 
-// Store active tokens with user mapping
+// Store active tokens with user mapping - グローバルに管理
 const activeTokens: Record<string, string> = {}
 
 export const mockLogin = async (email: string, password: string): Promise<{ user: MockUser; token: string } | null> => {
@@ -67,7 +67,11 @@ export const mockLogin = async (email: string, password: string): Promise<{ user
 
   // Store token mapping
   activeTokens[token] = user.id
-  console.log("Token created and stored:", { token: token.substring(0, 30) + "...", userId: user.id })
+  console.log("Token created and stored:", {
+    token: token.substring(0, 30) + "...",
+    userId: user.id,
+    totalActiveTokens: Object.keys(activeTokens).length,
+  })
 
   return { user, token }
 }
@@ -109,6 +113,10 @@ export const mockGetUserFromToken = async (token: string): Promise<MockUser | nu
   const userId = activeTokens[token]
   if (!userId) {
     console.log("Token not found in active tokens")
+    console.log(
+      "Available tokens:",
+      Object.keys(activeTokens).map((t) => t.substring(0, 30) + "..."),
+    )
 
     // Fallback: try to parse token (old method)
     const parts = token.split("-")
@@ -179,5 +187,11 @@ export const getAllMockGods = (): any[] => {
 
 // Debug function to check active tokens
 export const getActiveTokens = () => {
-  return activeTokens
+  return { ...activeTokens } // Return a copy to prevent external modification
+}
+
+// 強制的にトークンを追加する関数（デバッグ用）
+export const forceAddToken = (token: string, userId: string) => {
+  activeTokens[token] = userId
+  console.log("Force added token:", { token: token.substring(0, 30) + "...", userId })
 }
