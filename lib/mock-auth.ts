@@ -71,6 +71,7 @@ export const mockLogin = async (email: string, password: string): Promise<{ user
   console.log("Token created and stored:", {
     token: token.substring(0, 30) + "...",
     userId: user.id,
+    totalActiveTokens: Object.keys(activeTokens).length,
   })
 
   return { user, token }
@@ -118,6 +119,12 @@ export const mockGetUserFromToken = async (token: string): Promise<MockUser | nu
     console.log("User found from active tokens:", { userId, found: !!user })
     return user || null
   }
+
+  console.log("Token not found in active tokens")
+  console.log(
+    "Available tokens:",
+    Object.keys(activeTokens).map((t) => t.substring(0, 30) + "..."),
+  )
 
   // If not found in active tokens, try to parse mock token format
   if (token.startsWith("mock-token-")) {

@@ -434,6 +434,24 @@ export default function CreateGodPage() {
   }
 
   const handleSubmit = async () => {
+    // デバッグ: トークンの状態を確認
+    console.log("=== Debug Token Status ===")
+    try {
+      const debugResponse = await fetch("/api/debug/tokens", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const debugData = await debugResponse.json()
+      console.log("Debug response:", debugData)
+    } catch (error) {
+      console.error("Debug request failed:", error)
+    }
+
+    console.log("Submit started with:", {
+      userBalance,
+      CREATION_COST,
+      hasToken: !!token,
+      tokenPreview: token?.substring(0, 30) + "...",
+    })
     console.log("Submit started with:", {
       userBalance,
       CREATION_COST,
