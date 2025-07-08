@@ -1,62 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// 簡単なメモリストレージ
-const mockUsers = [
-  {
-    id: "1",
-    username: "admin",
-    email: "admin@kami.app",
-    saisenBalance: 10000,
-    isAdmin: true,
-  },
-  {
-    id: "2",
-    username: "user1",
-    email: "user1@kami.app",
-    saisenBalance: 1000,
-    isAdmin: false,
-  },
-]
-
-const mockGods: any[] = []
-const activeTokens: Record<string, string> = {}
-
-// トークンからユーザーを取得する関数
-function getUserFromToken(token: string) {
-  console.log("Getting user from token:", token.substring(0, 30) + "...")
-
-  // アクティブトークンから検索
-  const userId = activeTokens[token]
-  if (userId) {
-    const user = mockUsers.find((u) => u.id === userId)
-    console.log("User found from active tokens:", user ? user.username : "not found")
-    return user
-  }
-
-  // フォールバック: トークンを解析
-  const parts = token.split("-")
-  if (parts.length >= 3 && parts[0] === "mock" && parts[1] === "token") {
-    const fallbackUserId = parts[2]
-    const user = mockUsers.find((u) => u.id === fallbackUserId)
-    if (user) {
-      // アクティブトークンに追加
-      activeTokens[token] = user.id
-      console.log("User found via fallback:", user.username)
-      return user
-    }
-  }
-
-  console.log("No user found for token")
-  return null
-}
+import { mockGetUserFromToken, mockUpdateUserBalance, mockCreateGod, getActiveTokens } from "@/lib/mock-auth"
 
 export async function GET() {
+  const activeTokens = getActiveTokens()
   return NextResponse.json({
     message: "God creation API is accessible",
     timestamp: new Date().toISOString(),
     activeTokensCount: Object.keys(activeTokens).length,
-    usersCount: mockUsers.length,
-    godsCount: mockGods.length,
   })
 }
 
@@ -84,14 +34,11 @@ export async function POST(request: NextRequest) {
     console.log("🔑 Token extracted:", token.substring(0, 30) + "...")
 
     // ユーザー認証
-    const user = getUserFromToken(token)
+    const user = await mockGetUserFromToken(token)
     if (!user) {
       console.log("❌ User not found for token")
+      const activeTokens = getActiveTokens()
       console.log("Available active tokens:", Object.keys(activeTokens).length)
-      console.log(
-        "Available users:",
-        mockUsers.map((u) => u.username),
-      )
       return NextResponse.json({ error: "無効なトークンです" }, { status: 401 })
     }
 
@@ -132,9 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 神様を作成
-    const godId = `god_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const god = {
-      id: godId,
+    const godData = {
       name: name || "無名の神",
       description: description || "神秘的な神様",
       category: category || "その他",
@@ -142,25 +87,26 @@ export async function POST(request: NextRequest) {
       creatorId: user.id,
       believersCount: 0,
       powerLevel: 1,
-      createdAt: new Date().toISOString(),
       ...body, // 他のデータも保存
     }
 
-    mockGods.push(god)
+    const godId = await mockCreateGod(godData)
     console.log("✅ God created:", godId)
 
     // 残高を更新
-    const userIndex = mockUsers.findIndex((u) => u.id === user.id)
-    if (userIndex !== -1) {
-      mockUsers[userIndex].saisenBalance -= CREATION_COST
-      console.log("✅ Balance updated:", mockUsers[userIndex].saisenBalance)
-    }
+    const newBalance = user.saisenBalance - CREATION_COST
+    await mockUpdateUserBalance(user.id, newBalance)
+    console.log("✅ Balance updated:", newBalance)
 
     const response = {
       message: "神様が正常に作成されました！",
       godId: godId,
-      newBalance: mockUsers[userIndex]?.saisenBalance || user.saisenBalance - CREATION_COST,
-      god: god,
+      newBalance: newBalance,
+      god: {
+        id: godId,
+        ...godData,
+        createdAt: new Date().toISOString(),
+      },
     }
 
     console.log("🎉 God creation completed successfully")
